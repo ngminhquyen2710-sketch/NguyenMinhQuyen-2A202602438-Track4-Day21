@@ -81,4 +81,4 @@ python tools/check_submission.py
 
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| Google Antigravity (Gemini 3.8 Flash) | Hỗ trợ cấu trúc script `src/autolabel_qa.py`, vẽ biểu đồ matplotlib và định dạng báo cáo | Tự chạy kiểm thử toán học trên toạ độ synthetic và KITTI, kiểm tra code với lệnh `python tools/check_submission.py` đạt 100% PASS |
+| Gemini 3.8 Flash | Hỗ trợ cấu trúc script `src/autolabel_qa.py`, vẽ biểu đồ matplotlib và định dạng báo cáo | Tự chạy kiểm thử toán học trên toạ độ synthetic và KITTI, kiểm tra code với lệnh `python tools/check_submission.py`  |
