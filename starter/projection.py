@@ -32,7 +32,11 @@ def velo_to_cam(points_xyz: np.ndarray, calib: KittiCalib) -> np.ndarray:
       3. Trả về 3 cột đầu.
     Tự kiểm: một điểm velodyne (10, 0, 0) phải có z_cam ~ 10 (phía trước camera).
     """
-    raise NotImplementedError("TODO(CP2): cài đặt velo_to_cam")
+    if len(points_xyz) == 0:
+        return np.zeros((0, 3), dtype=np.float32)
+    pts_hom = np.hstack([points_xyz, np.ones((len(points_xyz), 1), dtype=points_xyz.dtype)])
+    pts_cam = pts_hom @ calib.T_cam_velo.T
+    return pts_cam[:, :3]
 
 
 def cam_to_image(points_cam: np.ndarray, P2: np.ndarray, image_shape: tuple[int, ...],
@@ -52,7 +56,46 @@ def cam_to_image(points_cam: np.ndarray, P2: np.ndarray, image_shape: tuple[int,
       3. Chia cho s để có (u, v). Chỉ chia với điểm có depth > min_depth.
       4. Lọc theo kích thước ảnh image_shape[:2] = (H, W).
     """
-    raise NotImplementedError("TODO(CP2): cài đặt cam_to_image")
+    N = len(points_cam)
+    if N == 0:
+        return np.zeros((0, 2), dtype=np.float32), np.zeros((0,), dtype=np.float32), np.zeros((0,), dtype=bool)
+
+    H, W = image_shape[:2]
+    mask = np.zeros(N, dtype=bool)
+
+    # 1. Lọc điểm hợp lệ (hữu hạn)
+    finite_mask = np.isfinite(points_cam).all(axis=1)
+    if not np.any(finite_mask):
+        return np.zeros((0, 2), dtype=np.float32), np.zeros((0,), dtype=np.float32), mask
+
+    pts_valid = points_cam[finite_mask]
+
+    # 2. Toạ độ đồng nhất (K, 4), nhân P2 (3, 4) -> (K, 3)
+    pts_hom = np.hstack([pts_valid, np.ones((len(pts_valid), 1), dtype=pts_valid.dtype)])
+    proj = pts_hom @ P2.T
+
+    # 3. Depth s = proj[:, 2]
+    s = proj[:, 2]
+    depth_mask = s > min_depth
+
+    # Chỉ chia cho s với các điểm có depth > min_depth
+    valid_proj = depth_mask
+    u = np.full_like(s, -1.0)
+    v = np.full_like(s, -1.0)
+    u[valid_proj] = proj[valid_proj, 0] / s[valid_proj]
+    v[valid_proj] = proj[valid_proj, 1] / s[valid_proj]
+
+    # 4. Lọc theo kích thước ảnh
+    inside_img = valid_proj & (u >= 0) & (u < W) & (v >= 0) & (v < H)
+
+    # Gán lại mask đầy đủ cho N điểm
+    valid_indices = np.where(finite_mask)[0]
+    mask[valid_indices[inside_img]] = True
+
+    uv_out = np.stack([u[inside_img], v[inside_img]], axis=1)
+    depth_out = s[inside_img]
+
+    return uv_out, depth_out, mask
 
 
 def project_velo_to_image(points: np.ndarray, calib: KittiCalib, image_shape: tuple[int, ...]):
